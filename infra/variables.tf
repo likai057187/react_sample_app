@@ -80,9 +80,9 @@ variable "cloud_run_min_instances" {
 }
 
 variable "cloud_run_max_instances" {
-  description = "Maximum Cloud Run instances. Keep low unless Socket.IO is moved to a shared pub/sub adapter."
+  description = "Maximum Cloud Run instances. Keep at 1 unless Socket.IO is moved to a shared pub/sub adapter."
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "roboflow_api_key" {

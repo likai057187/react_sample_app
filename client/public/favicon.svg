@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0a0a0b"/>
-  <circle cx="32" cy="32" r="25" fill="none" stroke="#d6b565" stroke-width="2"/>
-  <path d="M22 18 42 38" stroke="#f4e2aa" stroke-width="5" stroke-linecap="round"/>
-  <path d="M18 22 26 14" stroke="#d6b565" stroke-width="5" stroke-linecap="round"/>
-  <path d="M38 42 46 34" stroke="#d6b565" stroke-width="5" stroke-linecap="round"/>
-  <path d="M18 48h28" stroke="#f4e2aa" stroke-width="5" stroke-linecap="round"/>
-  <path d="M26 40h12" stroke="#d6b565" stroke-width="5" stroke-linecap="round"/>
+  <rect width="64" height="64" rx="14" fill="#050505"/>
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#c9a962" stroke-width="3"/>
+  <path d="M21 19h13" stroke="#c9a962" stroke-width="5" stroke-linecap="round"/>
+  <path d="M43 45H30" stroke="#c9a962" stroke-width="5" stroke-linecap="round"/>
+  <text x="32" y="39" fill="#f5f0e6" font-family="Georgia, serif" font-size="19" font-weight="700" text-anchor="middle">CR</text>
 </svg>

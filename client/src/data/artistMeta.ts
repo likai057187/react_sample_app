@@ -14,6 +14,8 @@ export const ARTIST_BIOS: Record<string, string> = {
     "Moni bridges traditional visual language with contemporary rhythm, creating works that feel both ceremonial and immediate.",
   olivia:
     "Olivia’s mixed-media works turn everyday phrases into intimate, psychologically charged compositions.",
+  "david-hayes":
+    "David Hayes works across welded steel and gouache, translating landscape, balance, and architectural form into crisp modernist silhouettes.",
 };
 
 /** Badge portrait — same origin as catalog images (`server` serves `client/asset/artwork` at `/api/media/…`). */
@@ -24,6 +26,7 @@ export const ARTIST_BADGE_URL: Record<string, string> = {
   cris: "/api/media/Cris/badge/Cris.avif",
   moni: "/api/media/Moni/badge/Moni.avif",
   olivia: "/api/media/Olivia/badge/Olivia.jpg",
+  "david-hayes": "/api/media/David%20Hayes/badge/DavidHeys.png",
 };
 
 export const ARTIST_ROLE_LINE: Record<string, string> = {
@@ -33,6 +36,7 @@ export const ARTIST_ROLE_LINE: Record<string, string> = {
   cris: "Painter · Exhibition 2026",
   moni: "Painter · Exhibition 2026",
   olivia: "Mixed media artist · Exhibition 2026",
+  "david-hayes": "Sculptor · Exhibition 2026",
 };
 
 export function getArtistBio(artistId: string): string {

@@ -73,6 +73,10 @@ export function NetworkingScreen() {
   useEffect(() => {
     if (!selectedFriend) return;
     void loadChatMessages(selectedFriend.guestId).then(setChatMessages);
+    const id = globalThis.setInterval(() => {
+      void loadChatMessages(selectedFriend.guestId).then(setChatMessages);
+    }, 5000);
+    return () => globalThis.clearInterval(id);
   }, [selectedFriend]);
 
   const onFriendBarcode = useCallback(
@@ -328,7 +332,7 @@ export function NetworkingScreen() {
             {chatMessages.length === 0 ? (
               <View style={styles.emptyChat}>
                 <Text style={styles.emptyTitle}>Say hello</Text>
-                <Text style={styles.muted}>Messages are saved on this device for the event demo.</Text>
+                <Text style={styles.muted}>Messages are saved securely for the event.</Text>
               </View>
             ) : (
               chatMessages.map((m) => (

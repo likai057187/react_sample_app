@@ -1,7 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from './apiClient';
-
-const CHAT_PREFIX = 'cr-network-chat-v1:';
 
 export type ChatMessage = {
   id: string;
@@ -30,30 +27,16 @@ export type ForumTopic = {
   replies: ForumReply[];
 };
 
-function id(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function chatKey(friendGuestId: string): string {
-  return `${CHAT_PREFIX}${friendGuestId}`;
-}
-
 export async function loadChatMessages(friendGuestId: string): Promise<ChatMessage[]> {
   try {
-    const raw = await AsyncStorage.getItem(chatKey(friendGuestId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as ChatMessage[];
-    return Array.isArray(parsed) ? parsed : [];
+    const res = await apiFetch(`/api/network/chats/${encodeURIComponent(friendGuestId)}/messages`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json().catch(() => ({}))) as { messages?: ChatMessage[] };
+    return Array.isArray(data.messages) ? data.messages : [];
   } catch {
     return [];
-  }
-}
-
-async function saveChatMessages(friendGuestId: string, rows: ChatMessage[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(chatKey(friendGuestId), JSON.stringify(rows.slice(-120)));
-  } catch {
-    /* ignore local persistence failures */
   }
 }
 
@@ -65,17 +48,14 @@ export async function addChatMessage(input: {
 }): Promise<ChatMessage | null> {
   const body = input.body.trim();
   if (!body) return null;
+  const res = await apiFetch(`/api/network/chats/${encodeURIComponent(input.friendGuestId)}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) return null;
   const rows = await loadChatMessages(input.friendGuestId);
-  const message: ChatMessage = {
-    id: id('msg'),
-    friendGuestId: input.friendGuestId,
-    authorId: input.authorId,
-    authorName: input.authorName.trim() || 'Collector',
-    body: body.slice(0, 800),
-    createdAt: Date.now(),
-  };
-  await saveChatMessages(input.friendGuestId, [...rows, message]);
-  return message;
+  return rows[rows.length - 1] ?? null;
 }
 
 export async function loadForumTopics(): Promise<ForumTopic[]> {
@@ -106,15 +86,7 @@ export async function addForumTopic(input: {
     body: JSON.stringify({ title, body }),
   });
   return res.ok
-    ? {
-        id: id('topic'),
-        authorId: input.authorId,
-        authorName: input.authorName.trim() || 'Collector',
-        title: (title || body.slice(0, 48)).slice(0, 90),
-        body: body.slice(0, 1200),
-        createdAt: Date.now(),
-        replies: [],
-      }
+    ? ((await loadForumTopics())[0] ?? null)
     : null;
 }
 
@@ -132,12 +104,6 @@ export async function addForumReply(input: {
     body: JSON.stringify({ topicId: input.topicId, body }),
   });
   return res.ok
-    ? {
-        id: id('reply'),
-        authorId: input.authorId,
-        authorName: input.authorName.trim() || 'Collector',
-        body: body.slice(0, 800),
-        createdAt: Date.now(),
-      }
+    ? { id: input.topicId, authorId: input.authorId, authorName: input.authorName.trim() || 'Collector', body, createdAt: Date.now() }
     : null;
 }

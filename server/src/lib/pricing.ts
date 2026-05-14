@@ -26,7 +26,6 @@ export type ClientArtwork = CatalogEntry & {
   estimateLowCents: number;
   estimateHighCents: number;
   openingBidCents: number;
-  reserveCents: number;
 };
 
 function fallbackDescription(entry: CatalogEntry): string {
@@ -39,12 +38,9 @@ export function buildArtworksForClient(entries: CatalogEntry[]): ClientArtwork[]
     const priceCents = e.priceCents;
     const fallbackBase = 2800 + i * 220;
     const fallbackSpread = 400 + (i % 5) * 120;
-    const estimateLowCents = priceCents ? Math.round(priceCents * 0.85) : (fallbackBase - 200) * 100;
-    const estimateHighCents = priceCents ?? (fallbackBase + fallbackSpread) * 100;
-    const openingBidCents = priceCents ? Math.max(Math.round(priceCents * 0.6), 80000) : Math.max(estimateLowCents - 30000, 80000);
-    const reserveCents = priceCents
-      ? Math.max(Math.round(priceCents * 0.75), openingBidCents)
-      : openingBidCents + Math.round((estimateHighCents - openingBidCents) * 0.35);
+    const openingBidCents = priceCents ?? Math.max((fallbackBase - 500) * 100, 80000);
+    const estimateLowCents = priceCents ? priceCents : (fallbackBase - 200) * 100;
+    const estimateHighCents = priceCents ? Math.round(priceCents * 1.25) : (fallbackBase + fallbackSpread) * 100;
     return {
       ...e,
       series: SERIES,
@@ -55,7 +51,6 @@ export function buildArtworksForClient(entries: CatalogEntry[]): ClientArtwork[]
       estimateLowCents,
       estimateHighCents,
       openingBidCents,
-      reserveCents,
     };
   });
 }

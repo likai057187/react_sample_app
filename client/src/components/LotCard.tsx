@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { isReserveMet } from '../lib/bidding';
 import { formatUsdFromCents } from '../lib/format';
 import type { Artwork } from '../types';
 import { useAuction } from '../context/AuctionProvider';
@@ -20,7 +19,6 @@ export function LotCard({ artwork }: Props) {
   const { getLot, isLotClosed, isLeading, guestId } = useAuction();
   const lot = getLot(artwork.id);
   const closed = isLotClosed(artwork.id);
-  const reserveOk = lot ? isReserveMet(artwork, lot) : false;
   const hasBids = lot ? lot.bids.length > 0 : false;
   const hasMyBid = lot ? lot.bids.some((b) => b.guestId === guestId) : false;
   const displayBid = hasBids && lot ? lot.currentBidCents : artwork.openingBidCents;
@@ -58,7 +56,6 @@ export function LotCard({ artwork }: Props) {
         <Text style={styles.bidVal}>{formatUsdFromCents(displayBid)}</Text>
         <View style={styles.badges}>
           {statusBadge}
-          {reserveOk && <Badge label="Reserve met" tone="ok" />}
         </View>
         <View style={styles.rule} />
         {lot && (

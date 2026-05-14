@@ -37,4 +37,4 @@ COPY --from=builder /app/client/asset ./client/asset
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run db:push --prefix server && node server/dist/index.js"]
+CMD ["sh", "-c", "node server/dist/scripts/applyStartupSchemaPatches.js && npm run db:push --prefix server && node server/dist/index.js"]

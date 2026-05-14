@@ -1,4 +1,4 @@
-/** Reserved for eager hydration if screens need sync caches later. */
+/** Reserved for eager hydration of non-authoritative UI caches. */
 export async function initLocalStores(): Promise<void> {
-  /* friends + bio load on-demand in NetworkingScreen */
+  /* Authoritative networking data lives on the server. */
 }

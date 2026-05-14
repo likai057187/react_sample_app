@@ -1,19 +1,22 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BIO_KEY = 'di-network-bio';
+import { apiFetch } from './apiClient';
 
 export async function loadNetworkBio(): Promise<string> {
   try {
-    return (await AsyncStorage.getItem(BIO_KEY)) ?? '';
+    const res = await apiFetch('/api/network/profile', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return '';
+    const data = (await res.json().catch(() => ({}))) as { profile?: { bio?: string } };
+    return typeof data.profile?.bio === 'string' ? data.profile.bio : '';
   } catch {
     return '';
   }
 }
 
 export async function saveNetworkBio(bio: string): Promise<void> {
-  try {
-    await AsyncStorage.setItem(BIO_KEY, bio.trim().slice(0, 400));
-  } catch {
-    /* ignore */
-  }
+  await apiFetch('/api/network/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ bio }),
+  }).catch(() => undefined);
 }

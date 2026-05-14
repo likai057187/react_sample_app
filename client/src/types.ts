@@ -15,7 +15,6 @@ export type Artwork = {
   estimateLowCents: number;
   estimateHighCents: number;
   openingBidCents: number;
-  reserveCents: number;
 };
 
 export type BidRecord = {

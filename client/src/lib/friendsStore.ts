@@ -1,7 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiFetch } from './apiClient';
 import { buildFriendQrPayload as buildQrPayload } from './qrPayload';
-
-const KEY = 'di-friends-v1';
 
 export type FriendEntry = {
   guestId: string;
@@ -9,27 +7,17 @@ export type FriendEntry = {
   addedAt: number;
 };
 
-async function read(): Promise<FriendEntry[]> {
+export async function loadFriends(): Promise<FriendEntry[]> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
-    if (!raw) return [];
-    const p = JSON.parse(raw) as FriendEntry[];
-    return Array.isArray(p) ? p : [];
+    const res = await apiFetch('/api/network/friends', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json().catch(() => ({}))) as { friends?: FriendEntry[] };
+    return Array.isArray(data.friends) ? data.friends : [];
   } catch {
     return [];
   }
-}
-
-async function write(rows: FriendEntry[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(KEY, JSON.stringify(rows.slice(0, 200)));
-  } catch {
-    /* ignore */
-  }
-}
-
-export async function loadFriends(): Promise<FriendEntry[]> {
-  return read();
 }
 
 export async function addFriend(
@@ -39,12 +27,19 @@ export async function addFriend(
   const g = guestId.trim();
   const name = displayName.trim() || 'Collector';
   if (g.length < 4) return { ok: false, error: 'Invalid friend code.' };
-  const rows = await read();
-  if (rows.some((r) => r.guestId === g)) {
-    await write(rows.map((r) => (r.guestId === g ? { ...r, displayName: name } : r)));
-    return { ok: false, error: 'Already in your list.' };
+  const res = await apiFetch('/api/network/friends', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ guestId: g, displayName: name }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; alreadyExisted?: boolean };
+  if (!res.ok) {
+    if (data.error === 'self_friend') return { ok: false, error: 'That is your own collector tag.' };
+    if (data.error === 'invalid_friend') return { ok: false, error: 'Invalid friend code.' };
+    if (res.status === 401) return { ok: false, error: 'Session expired. Restart the app.' };
+    return { ok: false, error: 'Could not add friend.' };
   }
-  await write([{ guestId: g, displayName: name, addedAt: Date.now() }, ...rows]);
+  if (data.alreadyExisted) return { ok: false, error: 'Already in your list.' };
   return { ok: true };
 }
 

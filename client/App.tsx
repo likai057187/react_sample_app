@@ -11,6 +11,32 @@ import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { blurActiveElement } from './src/lib/focus';
 import { initLocalStores } from './src/lib/localStoresInit';
 
+function useWebVisualViewportHeight() {
+  const [height, setHeight] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const viewport = window.visualViewport;
+    const update = () => {
+      setHeight(Math.round(viewport?.height ?? window.innerHeight));
+    };
+
+    update();
+    viewport?.addEventListener('resize', update);
+    viewport?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+
+    return () => {
+      viewport?.removeEventListener('resize', update);
+      viewport?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+
+  return height;
+}
+
 function AppGate() {
   const session = useSession();
 
@@ -52,8 +78,16 @@ function AppGate() {
 }
 
 export default function App() {
+  const webHeight = useWebVisualViewportHeight();
+
   return (
-    <GestureHandlerRootView style={styles.gestureRoot}>
+    <GestureHandlerRootView
+      style={[
+        styles.gestureRoot,
+        Platform.OS === 'web' && styles.webRoot,
+        Platform.OS === 'web' && (webHeight ? { height: webHeight } : styles.webRootFallback),
+      ]}
+    >
       <SafeAreaProvider>
         <SessionProvider>
           <StatusBar style="light" />
@@ -67,7 +101,14 @@ export default function App() {
 const styles = StyleSheet.create({
   gestureRoot: {
     flex: 1,
-    ...(Platform.OS === 'web' ? { width: '100%', minHeight: '100vh' as unknown as number } : {}),
+    backgroundColor: '#0a0a0b',
+  },
+  webRoot: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  webRootFallback: {
+    height: '100dvh' as unknown as number,
   },
   center: {
     flex: 1,

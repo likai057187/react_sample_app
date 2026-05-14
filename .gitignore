@@ -8,3 +8,7 @@ client/dist
 .env
 .env.*
 server/data/
+server/prisma/data/
+client/.expo/
+infra/tfplan
+*.tfplan

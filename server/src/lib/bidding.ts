@@ -9,7 +9,3 @@ export function nextMinimumBidCents(
   const pct = Math.max(MIN_INCREMENT_CENTS, Math.round(currentBidCents * 0.05));
   return currentBidCents + pct;
 }
-
-export function isReserveMet(reserveCents: number, currentBidCents: number): boolean {
-  return currentBidCents >= reserveCents;
-}

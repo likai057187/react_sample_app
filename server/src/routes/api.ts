@@ -1,18 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { env } from '../config/env.js';
-import { isReserveMet } from '../lib/bidding.js';
 import type { ClientArtwork } from '../lib/pricing.js';
 import {
   ensureGuestRecord,
-  setGuestDisplayName,
+  claimGuestDisplayName,
   getGuestDisplayName,
   getAuctionStateJson,
-  getLotForReserve,
   placeBid,
   setVote,
   deleteVote,
   addFeedback,
+  getNetworkProfileJson,
+  setNetworkBio,
+  getFriendsJson,
+  addFriend,
+  getDirectMessagesJson,
+  hasFriendshipConnection,
+  addDirectMessage,
   getForumTopicsJson,
   addForumTopic,
   addForumReply,
@@ -180,8 +185,9 @@ export const auctionApiRoutes: FastifyPluginAsync<AuctionApiOpts> = async (fasti
     if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 40) {
       return reply.code(400).send({ error: 'invalid_display_name' });
     }
-    await setGuestDisplayName(guestId, name);
-    return { ok: true };
+    const session = await claimGuestDisplayName(guestId, name);
+    setGuestCookie(reply, session.guestId);
+    return { ok: true, ...session, welcomeComplete: true };
   });
 
   fastify.get('/catalog', async () => {
@@ -290,6 +296,90 @@ export const auctionApiRoutes: FastifyPluginAsync<AuctionApiOpts> = async (fasti
     const topics = await getForumTopicsJson();
     return { version: 1, topics };
   });
+
+  fastify.get('/network/profile', async (request, reply) => {
+    const guestId = getGuestIdFromRequest(request);
+    if (!guestId) {
+      return reply.code(401).send({ error: 'no_session' });
+    }
+    const profile = await getNetworkProfileJson(guestId);
+    return { version: 1, profile };
+  });
+
+  fastify.patch<{ Body: { bio?: unknown } }>('/network/profile', async (request, reply) => {
+    const guestId = getGuestIdFromRequest(request);
+    if (!guestId) {
+      return reply.code(401).send({ error: 'no_session' });
+    }
+    const bio = typeof request.body?.bio === 'string' ? request.body.bio : '';
+    await setNetworkBio(guestId, bio);
+    return { ok: true };
+  });
+
+  fastify.get('/network/friends', async (request, reply) => {
+    const guestId = getGuestIdFromRequest(request);
+    if (!guestId) {
+      return reply.code(401).send({ error: 'no_session' });
+    }
+    const friends = await getFriendsJson(guestId);
+    return { version: 1, friends };
+  });
+
+  fastify.post<{ Body: { guestId?: unknown; displayName?: unknown } }>('/network/friends', async (request, reply) => {
+    const ownerId = getGuestIdFromRequest(request);
+    if (!ownerId) {
+      return reply.code(401).send({ error: 'no_session' });
+    }
+    const friendId = typeof request.body?.guestId === 'string' ? request.body.guestId.trim() : '';
+    if (!UUID_RE.test(friendId)) {
+      return reply.code(400).send({ error: 'invalid_friend' });
+    }
+    const displayName = typeof request.body?.displayName === 'string' ? request.body.displayName : 'Collector';
+    const result = await addFriend({ ownerId, friendId, displayName });
+    if (!result.ok) {
+      return reply.code(400).send({ error: result.error });
+    }
+    return { ok: true, alreadyExisted: result.alreadyExisted };
+  });
+
+  fastify.get<{ Params: { friendId: string } }>('/network/chats/:friendId/messages', async (request, reply) => {
+    const guestId = getGuestIdFromRequest(request);
+    if (!guestId) {
+      return reply.code(401).send({ error: 'no_session' });
+    }
+    const friendId = request.params.friendId;
+    if (!UUID_RE.test(friendId)) {
+      return reply.code(400).send({ error: 'invalid_friend' });
+    }
+    if (!(await hasFriendshipConnection(guestId, friendId))) {
+      return reply.code(403).send({ error: 'not_friends' });
+    }
+    const messages = await getDirectMessagesJson(guestId, friendId);
+    return { version: 1, messages };
+  });
+
+  fastify.post<{ Params: { friendId: string }; Body: { body?: unknown } }>(
+    '/network/chats/:friendId/messages',
+    async (request, reply) => {
+      const senderId = getGuestIdFromRequest(request);
+      if (!senderId) {
+        return reply.code(401).send({ error: 'no_session' });
+      }
+      const recipientId = request.params.friendId;
+      if (!UUID_RE.test(recipientId)) {
+        return reply.code(400).send({ error: 'invalid_friend' });
+      }
+      if (!(await hasFriendshipConnection(senderId, recipientId))) {
+        return reply.code(403).send({ error: 'not_friends' });
+      }
+      const body = typeof request.body?.body === 'string' ? request.body.body : '';
+      const result = await addDirectMessage({ senderId, recipientId, body });
+      if (!result.ok) {
+        return reply.code(400).send({ error: result.error });
+      }
+      return { ok: true };
+    },
+  );
 
   fastify.post<{ Body: { title?: unknown; body?: unknown } }>('/network/forum/topics', async (request, reply) => {
     const guestId = getGuestIdFromRequest(request);
@@ -410,20 +500,4 @@ export const auctionApiRoutes: FastifyPluginAsync<AuctionApiOpts> = async (fasti
     return { ok: true };
   });
 
-  fastify.get<{ Params: { id: string } }>('/lots/:id/reserve', async (request, reply) => {
-    const id = request.params.id;
-    const art = getArtworks().find((e) => e.id === id);
-    if (!art) {
-      return reply.code(404).send({ error: 'unknown_lot' });
-    }
-    const lot = await getLotForReserve(id);
-    if (!lot) {
-      return reply.code(404).send({ error: 'unknown_lot' });
-    }
-    return {
-      reserveMet: isReserveMet(art.reserveCents, lot.currentBidCents),
-      reserveCents: art.reserveCents,
-      openingBidCents: art.openingBidCents,
-    };
-  });
 };

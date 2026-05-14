@@ -13,13 +13,19 @@ model EventSettings {
 }
 
 model Guest {
-  id           String       @id
-  displayName  String?
-  bids         Bid[]
-  votes        Vote[]
-  feedback     Feedback[]
-  forumTopics  ForumTopic[]
-  forumReplies ForumReply[]
+  id               String          @id
+  displayName      String?
+  displayNameKey   String?         @unique
+  bio              String?
+  bids             Bid[]
+  votes            Vote[]
+  feedback         Feedback[]
+  forumTopics      ForumTopic[]
+  forumReplies     ForumReply[]
+  friends          Friendship[]    @relation("FriendshipOwner")
+  friendedBy       Friendship[]    @relation("FriendshipTarget")
+  sentMessages     DirectMessage[] @relation("MessageSender")
+  receivedMessages DirectMessage[] @relation("MessageRecipient")
 }
 
 model Lot {
@@ -90,5 +96,32 @@ model ForumReply {
   createdAt   DateTime
 
   @@index([topicId, createdAt])
+  @@index([createdAt])
+}
+
+model Friendship {
+  ownerId             String
+  owner               Guest    @relation("FriendshipOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  friendId            String
+  friend              Guest    @relation("FriendshipTarget", fields: [friendId], references: [id], onDelete: Cascade)
+  capturedDisplayName String?
+  addedAt             DateTime
+
+  @@id([ownerId, friendId])
+  @@index([friendId])
+  @@index([addedAt])
+}
+
+model DirectMessage {
+  id          String   @id
+  senderId    String
+  sender      Guest    @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   Guest    @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  createdAt   DateTime
+
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, senderId, createdAt])
   @@index([createdAt])
 }

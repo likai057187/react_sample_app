@@ -12,6 +12,7 @@ const MAX_BIDS_PER_LOT = 64;
 const MAX_FEEDBACK_GLOBAL = 200;
 const MAX_FORUM_TOPICS = 120;
 const MAX_FORUM_REPLIES_PER_TOPIC = 80;
+const MAX_DIRECT_MESSAGES_PER_CONVERSATION = 120;
 
 export async function initDatabase(): Promise<void> {
   await prisma.$connect();
@@ -75,12 +76,71 @@ export async function getGuestDisplayName(guestId: string): Promise<string | nul
   return g?.displayName ?? null;
 }
 
-export async function setGuestDisplayName(guestId: string, displayName: string): Promise<void> {
-  const trimmed = displayName.trim().slice(0, 40);
+function cleanDisplayName(displayName: string): string {
+  return displayName.trim().replace(/\s+/g, ' ').slice(0, 40);
+}
+
+function displayNameKey(displayName: string): string {
+  return cleanDisplayName(displayName).toLocaleLowerCase('en-US');
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'P2002'
+  );
+}
+
+export async function claimGuestDisplayName(
+  guestId: string,
+  displayName: string,
+): Promise<{ guestId: string; displayName: string }> {
+  const trimmed = cleanDisplayName(displayName);
+  const key = displayNameKey(trimmed);
+  const existing = await prisma.guest.findUnique({
+    where: { displayNameKey: key },
+    select: { id: true, displayName: true },
+  });
+  if (existing) {
+    return { guestId: existing.id, displayName: existing.displayName ?? trimmed };
+  }
+
+  try {
+    const guest = await prisma.guest.upsert({
+      where: { id: guestId },
+      create: { id: guestId, displayName: trimmed, displayNameKey: key },
+      update: { displayName: trimmed, displayNameKey: key },
+      select: { id: true, displayName: true },
+    });
+    return { guestId: guest.id, displayName: guest.displayName ?? trimmed };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    const guest = await prisma.guest.findUnique({
+      where: { displayNameKey: key },
+      select: { id: true, displayName: true },
+    });
+    if (!guest) throw error;
+    return { guestId: guest.id, displayName: guest.displayName ?? trimmed };
+  }
+}
+
+export async function getNetworkProfileJson(guestId: string) {
+  await ensureGuestRecord(guestId);
+  const guest = await prisma.guest.findUnique({ where: { id: guestId } });
+  return {
+    guestId,
+    displayName: guest?.displayName ?? null,
+    bio: guest?.bio ?? '',
+  };
+}
+
+export async function setNetworkBio(guestId: string, bio: string): Promise<void> {
   await prisma.guest.upsert({
     where: { id: guestId },
-    create: { id: guestId, displayName: trimmed },
-    update: { displayName: trimmed },
+    create: { id: guestId, bio: bio.trim().slice(0, 400) },
+    update: { bio: bio.trim().slice(0, 400) },
   });
 }
 
@@ -138,10 +198,6 @@ export async function getAuctionStateJson() {
   return { eventEndsAt, lots, votes, feedback };
 }
 
-export async function getLotForReserve(lotId: string) {
-  return prisma.lot.findUnique({ where: { id: lotId } });
-}
-
 export type PlaceBidResult =
   | { ok: true }
   | { ok: false; error: 'unknown_lot' | 'closed' | 'below_min'; min?: number };
@@ -158,7 +214,10 @@ export async function placeBid({
   openingBidCents: number;
 }): Promise<PlaceBidResult> {
   return prisma.$transaction(async (tx) => {
-    const lot = await tx.lot.findUnique({ where: { id: lotId } });
+    const lockedLots = await tx.$queryRaw<
+      { id: string; currentBidCents: number; endsAt: Date }[]
+    >`SELECT "id", "currentBidCents", "endsAt" FROM "Lot" WHERE "id" = ${lotId} FOR UPDATE`;
+    const lot = lockedLots[0];
     if (!lot) return { ok: false, error: 'unknown_lot' };
     if (Date.now() > lot.endsAt.getTime()) return { ok: false, error: 'closed' };
 
@@ -380,5 +439,136 @@ export async function addForumReply({
     where: { topicId, id: { notIn: keepIds } },
   });
 
+  return { ok: true };
+}
+
+function friendToJson(friendship: {
+  friendId: string;
+  capturedDisplayName: string | null;
+  addedAt: Date;
+  friend: { displayName: string | null };
+}) {
+  return {
+    guestId: friendship.friendId,
+    displayName: friendship.friend.displayName?.trim() || friendship.capturedDisplayName?.trim() || 'Collector',
+    addedAt: friendship.addedAt.getTime(),
+  };
+}
+
+export async function getFriendsJson(guestId: string) {
+  await ensureGuestRecord(guestId);
+  const rows = await prisma.friendship.findMany({
+    where: { ownerId: guestId },
+    orderBy: { addedAt: 'desc' },
+    include: { friend: { select: { displayName: true } } },
+  });
+  return rows.map(friendToJson);
+}
+
+export async function addFriend({
+  ownerId,
+  friendId,
+  displayName,
+}: {
+  ownerId: string;
+  friendId: string;
+  displayName: string;
+}): Promise<{ ok: true; alreadyExisted: boolean } | { ok: false; error: 'self_friend' }> {
+  if (ownerId === friendId) return { ok: false, error: 'self_friend' };
+  const capturedDisplayName = displayName.trim().slice(0, 40) || 'Collector';
+  const existing = await prisma.friendship.findUnique({
+    where: { ownerId_friendId: { ownerId, friendId } },
+    select: { ownerId: true },
+  });
+  await prisma.$transaction(async (tx) => {
+    await tx.guest.upsert({ where: { id: ownerId }, create: { id: ownerId }, update: {} });
+    await tx.guest.upsert({
+      where: { id: friendId },
+      create: { id: friendId, displayName: capturedDisplayName },
+      update: {},
+    });
+    await tx.friendship.upsert({
+      where: { ownerId_friendId: { ownerId, friendId } },
+      create: { ownerId, friendId, capturedDisplayName, addedAt: new Date() },
+      update: { capturedDisplayName },
+    });
+  });
+  return { ok: true, alreadyExisted: !!existing };
+}
+
+function directMessageToJson(message: {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  createdAt: Date;
+  sender: { displayName: string | null };
+}, viewerId: string) {
+  const friendGuestId = message.senderId === viewerId ? message.recipientId : message.senderId;
+  return {
+    id: message.id,
+    friendGuestId,
+    authorId: message.senderId,
+    authorName: message.sender.displayName?.trim() || 'Collector',
+    body: message.body,
+    createdAt: message.createdAt.getTime(),
+  };
+}
+
+export async function getDirectMessagesJson(guestId: string, friendGuestId: string) {
+  await ensureGuestRecord(guestId);
+  const rows = await prisma.directMessage.findMany({
+    where: {
+      OR: [
+        { senderId: guestId, recipientId: friendGuestId },
+        { senderId: friendGuestId, recipientId: guestId },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    take: MAX_DIRECT_MESSAGES_PER_CONVERSATION,
+    include: { sender: { select: { displayName: true } } },
+  });
+  return rows.reverse().map((row) => directMessageToJson(row, guestId));
+}
+
+export async function hasFriendshipConnection(guestId: string, friendGuestId: string): Promise<boolean> {
+  if (guestId === friendGuestId) return false;
+  const row = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { ownerId: guestId, friendId: friendGuestId },
+        { ownerId: friendGuestId, friendId: guestId },
+      ],
+    },
+    select: { ownerId: true },
+  });
+  return !!row;
+}
+
+export async function addDirectMessage({
+  senderId,
+  recipientId,
+  body,
+}: {
+  senderId: string;
+  recipientId: string;
+  body: string;
+}): Promise<{ ok: true } | { ok: false; error: 'self_message' | 'invalid_body' }> {
+  if (senderId === recipientId) return { ok: false, error: 'self_message' };
+  const cleanBody = body.trim().slice(0, 800);
+  if (!cleanBody) return { ok: false, error: 'invalid_body' };
+  await prisma.$transaction(async (tx) => {
+    await tx.guest.upsert({ where: { id: senderId }, create: { id: senderId }, update: {} });
+    await tx.guest.upsert({ where: { id: recipientId }, create: { id: recipientId }, update: {} });
+    await tx.directMessage.create({
+      data: {
+        id: randomUUID(),
+        senderId,
+        recipientId,
+        body: cleanBody,
+        createdAt: new Date(),
+      },
+    });
+  });
   return { ok: true };
 }

@@ -7,7 +7,3 @@ export function nextMinimumBidCents(artwork: Artwork, lot: LotRuntime): number {
   const pct = Math.max(MIN_INCREMENT_CENTS, Math.round(lot.currentBidCents * 0.05));
   return lot.currentBidCents + pct;
 }
-
-export function isReserveMet(artwork: Artwork, lot: LotRuntime): boolean {
-  return lot.currentBidCents >= artwork.reserveCents;
-}

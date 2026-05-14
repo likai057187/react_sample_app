@@ -18,7 +18,7 @@ import { matchArtworkFrame } from '../lib/apiClient';
 import type { Artwork } from '../types';
 import type { MainTabParamList } from '../navigation/AppNavigator';
 
-const SCAN_INTERVAL_MS = 4200;
+const SCAN_INTERVAL_MS = 1500;
 const FIRST_SCAN_DELAY_MS = 900;
 const MATCH_FRAME_MAX_EDGE = 640;
 const MATCH_FRAME_JPEG_QUALITY = 0.45;

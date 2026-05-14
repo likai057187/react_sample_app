@@ -7,7 +7,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuction } from '../context/AuctionProvider';
 import { formatUsdFromCents } from '../lib/format';
-import { isReserveMet } from '../lib/bidding';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { LotCardBidBar } from '../components/LotCardBidBar';
 import { Countdown } from '../components/Countdown';
@@ -70,7 +69,6 @@ export function InventoryArtworkDetailScreen() {
   const myStars = getMyVote(artwork.id);
   const avg = getAverageVote(artwork.id);
   const artistDisplayName = formatArtistDisplayName(artwork.artistName);
-  const reserveMet = lot ? isReserveMet(artwork, lot) : false;
   const hasMyBid = lot ? lot.bids.some((bid) => bid.guestId === guestId) : false;
   const leading = hasMyBid && isLeading(artwork.id);
   const outbid = hasMyBid && !leading;
@@ -172,16 +170,6 @@ export function InventoryArtworkDetailScreen() {
                   <Ionicons name="information" color="#c9a962" size={17} />
                 </Pressable>
               </View>
-              <View style={styles.reserveCard}>
-                <View style={styles.reserveCopy}>
-                  <Text style={styles.reserveLabel}>Reserve</Text>
-                  <Text style={[styles.reserveValue, reserveMet && styles.reserveValueMet]}>{formatUsdFromCents(artwork.reserveCents)}</Text>
-                </View>
-                <View style={[styles.reservePill, reserveMet ? styles.reservePillMet : styles.reservePillOpen]}>
-                  <View style={[styles.reserveDot, reserveMet ? styles.reserveDotMet : styles.reserveDotOpen]} />
-                  <Text style={[styles.reservePillText, reserveMet && styles.reservePillTextMet]}>{reserveMet ? 'Met' : 'Not met'}</Text>
-                </View>
-              </View>
               <LotCardBidBar artwork={artwork} variant="detail" />
               <View style={styles.countdownRow}>
                 <Ionicons name="time-outline" color="#7a7670" size={15} />
@@ -253,7 +241,6 @@ export function InventoryArtworkDetailScreen() {
             <Text style={styles.rulesText}>Opening bid is the first acceptable bid for this artwork.</Text>
             <Text style={styles.rulesText}>Each new bid must meet the next minimum bid shown in the input.</Text>
             <Text style={styles.rulesText}>Minimum increment is $50, or 5% above the current bid, whichever is greater.</Text>
-            <Text style={styles.rulesText}>Reserve price is the confidential seller minimum. The lot is only eligible to sell once reserve is met.</Text>
           </Pressable>
         </Pressable>
       </Modal>
@@ -369,46 +356,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(214,181,101,0.32)',
     backgroundColor: '#111113',
   },
-  reserveCard: {
-    marginHorizontal: 14,
-    marginTop: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: '#101012',
-    borderWidth: 1,
-    borderColor: '#2a2a30',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  reserveCopy: { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
-  reserveLabel: { color: '#a8a4a0', fontSize: 13 },
-  reserveValue: { color: '#f5f0e6', fontSize: 14, fontWeight: '700' },
-  reserveValueMet: { color: '#8ee6a8' },
-  reservePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  reservePillOpen: {
-    backgroundColor: 'rgba(240,180,41,0.08)',
-    borderColor: 'rgba(240,180,41,0.28)',
-  },
-  reservePillMet: {
-    backgroundColor: 'rgba(88,214,141,0.12)',
-    borderColor: 'rgba(88,214,141,0.34)',
-  },
-  reserveDot: { width: 6, height: 6, borderRadius: 3 },
-  reserveDotOpen: { backgroundColor: '#c9a962' },
-  reserveDotMet: { backgroundColor: '#58d68d' },
-  reservePillText: { color: '#d7c48e', fontSize: 11, fontWeight: '700' },
-  reservePillTextMet: { color: '#8ee6a8' },
   countdownRow: {
     flexDirection: 'row',
     alignItems: 'center',

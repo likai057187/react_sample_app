@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuctionScreen } from '../screens/AuctionScreen';
 import { DiscoveryScreen } from '../screens/DiscoveryScreen';
 import { InventoryArtistsScreen } from '../screens/InventoryArtistsScreen';
@@ -25,6 +26,7 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const InvStack = createNativeStackNavigator<InventoryStackParamList>();
+const TAB_BAR_CONTENT_HEIGHT = 62;
 
 function InventoryNavigator() {
   return (
@@ -49,6 +51,9 @@ function InventoryNavigator() {
 }
 
 export function AppNavigator() {
+  const insets = useSafeAreaInsets();
+  const tabBarBottomPadding = Platform.OS === 'web' ? Math.max(insets.bottom, 14) : Math.max(insets.bottom, 24);
+
   return (
     <Tab.Navigator
       initialRouteName="Inventory"
@@ -57,13 +62,13 @@ export function AppNavigator() {
         tabBarStyle: {
           backgroundColor: '#101012',
           borderTopColor: '#2a2a2e',
-          height: Platform.OS === 'web' ? 84 : 88,
+          height: TAB_BAR_CONTENT_HEIGHT + tabBarBottomPadding,
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'web' ? 22 : 28,
+          paddingBottom: tabBarBottomPadding,
         },
         tabBarItemStyle: {
           paddingTop: 2,
-          paddingBottom: Platform.OS === 'web' ? 10 : 14,
+          paddingBottom: Platform.OS === 'web' ? 4 : 8,
         },
         tabBarIconStyle: {
           marginTop: 2,

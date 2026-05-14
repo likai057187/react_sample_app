@@ -85,7 +85,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ displayName }),
       });
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      const body = (await res.json().catch(() => ({}))) as { error?: string; guestId?: string };
       if (!res.ok) {
         if (body.error === 'invalid_display_name') {
           return { ok: false, error: 'Use 2–40 characters for your name.' };
@@ -94,6 +94,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           return { ok: false, error: 'Session expired. Restart the app.' };
         }
         return { ok: false, error: 'Could not save your name. Try again.' };
+      }
+      if (body.guestId) {
+        await setStoredGuestId(body.guestId);
       }
       await refreshSession();
       return { ok: true };
