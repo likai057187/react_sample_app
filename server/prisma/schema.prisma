@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Single row (id = 1): global auction end time for lots.
+model EventSettings {
+  id          Int      @id
+  eventEndsAt DateTime
+}
+
+model Guest {
+  id           String       @id
+  displayName  String?
+  bids         Bid[]
+  votes        Vote[]
+  feedback     Feedback[]
+  forumTopics  ForumTopic[]
+  forumReplies ForumReply[]
+}
+
+model Lot {
+  id              String     @id
+  currentBidCents Int        @default(0)
+  endsAt          DateTime
+  bids            Bid[]
+  votes           Vote[]
+  feedback        Feedback[]
+}
+
+model Bid {
+  id          String   @id
+  lotId       String
+  lot         Lot      @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  guestId     String
+  guest       Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  amountCents Int
+  placedAt    DateTime
+
+  @@index([lotId, placedAt])
+}
+
+model Vote {
+  lotId   String
+  guestId String
+  stars   Int
+  lot     Lot    @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  guest   Guest  @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@id([lotId, guestId])
+}
+
+model Feedback {
+  id          String   @id
+  lotId       String
+  lot         Lot      @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  guestId     String
+  guest       Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  displayName String
+  body        String
+  createdAt   DateTime
+
+  @@index([createdAt])
+}
+
+model ForumTopic {
+  id          String       @id
+  guestId     String
+  guest       Guest        @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  displayName String
+  title       String
+  body        String
+  createdAt   DateTime
+  replies     ForumReply[]
+
+  @@index([createdAt])
+}
+
+model ForumReply {
+  id          String     @id
+  topicId     String
+  topic       ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  guestId     String
+  guest       Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  displayName String
+  body        String
+  createdAt   DateTime
+
+  @@index([topicId, createdAt])
+  @@index([createdAt])
+}

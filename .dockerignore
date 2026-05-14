@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+server/dist
+infra/.terraform
+infra/terraform.tfstate
+infra/terraform.tfstate.*
+infra/terraform.tfvars
+infra/*.tfplan
+.tools
+**/.DS_Store

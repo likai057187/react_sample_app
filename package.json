@@ -1,26 +1,19 @@
 {
-  "name": "divine-illumination-auction",
+  "name": "react_sample_app",
   "private": true,
-  "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:tunnel": "VITE_TUNNEL=1 vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit"
-  },
-  "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.0"
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate:deploy": "npm run db:migrate:deploy --prefix server",
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev:api\" \"npm run web --prefix client\"",
+    "dev:api": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "db:clear-auction": "npm run db:clear-auction --prefix server",
+    "db:reset-auction-schedule": "npm run db:reset-auction-schedule --prefix server"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
-    "typescript": "~5.8.3",
-    "vite": "^6.3.4"
+    "concurrently": "^9.1.2"
   }
 }

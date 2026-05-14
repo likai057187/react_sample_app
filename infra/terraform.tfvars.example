@@ -1,0 +1,27 @@
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+app_name   = "chromatic-resonance"
+
+# Generate with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+app_api_key = "change-me-64-hex-chars"
+
+# Must be at least 12 characters.
+db_password = "change-me-min-12-chars"
+
+# Runtime sizing for about 100 concurrent event users.
+# Cloud Run: 1 vCPU / 1 GiB, up to 100 concurrent requests per container.
+# Cloud SQL: 1 vCPU / 3.75 GiB Postgres.
+cloud_run_cpu           = "1"
+cloud_run_memory        = "1Gi"
+cloud_run_concurrency   = 100
+cloud_run_min_instances = 1
+cloud_run_max_instances = 2
+db_tier                 = "db-custom-1-3840"
+db_disk_size_gb         = 20
+
+# Optional Discovery image classification.
+roboflow_api_key         = ""
+roboflow_model_id        = "artwork-classification-hldjp/2"
+roboflow_inference_url   = "https://serverless.roboflow.com/artwork-classification-hldjp/2"
+discovery_match_threshold = 0.4

@@ -1,7 +1,10 @@
 node_modules
-.tools
 dist
+client/dist
+.tools
+**/.tools
 .DS_Store
 *.local
 .env
 .env.*
+server/data/
