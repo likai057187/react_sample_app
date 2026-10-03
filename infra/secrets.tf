@@ -48,18 +48,18 @@ resource "google_secret_manager_secret_version" "roboflow_api_key" {
 resource "google_secret_manager_secret_iam_member" "api_key_access" {
   secret_id = google_secret_manager_secret.app_api_key.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run.email}"
+  member    = "serviceAccount:${google_service_account.vm_sa.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "db_password_access" {
   secret_id = google_secret_manager_secret.db_password.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run.email}"
+  member    = "serviceAccount:${google_service_account.vm_sa.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "roboflow_api_key_access" {
   count     = var.roboflow_api_key == "" ? 0 : 1
   secret_id = google_secret_manager_secret.roboflow_api_key[0].id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run.email}"
+  member    = "serviceAccount:${google_service_account.vm_sa.email}"
 }

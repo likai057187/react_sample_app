@@ -12,6 +12,7 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+  zone    = var.zone
 }
 
 locals {
@@ -20,8 +21,8 @@ locals {
   registry_host = "${var.region}-docker.pkg.dev"
 }
 
-resource "google_project_service" "run" {
-  service            = "run.googleapis.com"
+resource "google_project_service" "compute" {
+  service            = "compute.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -32,16 +33,6 @@ resource "google_project_service" "artifactregistry" {
 
 resource "google_project_service" "secretmanager" {
   service            = "secretmanager.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_project_service" "sqladmin" {
-  service            = "sqladmin.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_project_service" "cloudbuild" {
-  service            = "cloudbuild.googleapis.com"
   disable_on_destroy = false
 }
 

@@ -39,14 +39,19 @@ export async function clearAllAuctionParticipationData(): Promise<void> {
 }
 
 export async function resetAuctionScheduleToDefault(): Promise<void> {
+  await resetAuctionScheduleToEndAt(DEFAULT_EVENT_END);
+}
+
+/** Set global lot end time (reopens lots whose endsAt was in the past). */
+export async function resetAuctionScheduleToEndAt(eventEndsAt: Date): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.eventSettings.upsert({
       where: { id: SETTINGS_ID },
-      create: { id: SETTINGS_ID, eventEndsAt: DEFAULT_EVENT_END },
-      update: { eventEndsAt: DEFAULT_EVENT_END },
+      create: { id: SETTINGS_ID, eventEndsAt },
+      update: { eventEndsAt },
     });
     await tx.lot.updateMany({
-      data: { endsAt: DEFAULT_EVENT_END },
+      data: { endsAt: eventEndsAt },
     });
   });
 }

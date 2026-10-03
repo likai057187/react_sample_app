@@ -15,7 +15,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:clear-auction": "tsx scripts/clearAuctionData.ts",
-    "db:reset-auction-schedule": "tsx scripts/resetAuctionSchedule.ts",
+    "db:reset-auction-schedule": "tsx scripts/resetAuctionSchedule.ts --days=30",
     "ml:generate-roboflow-dataset": "tsx scripts/generateRoboflowDataset.ts"
   },
   "dependencies": {

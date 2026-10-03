@@ -1,24 +1,29 @@
-output "artifact_registry" {
-  description = "Artifact Registry Docker repository."
+output "vm_ip" {
+  description = "Public IP address of the VM (ephemeral — changes on reboot)"
+  value       = google_compute_instance.vm.network_interface[0].access_config[0].nat_ip
+}
+
+output "web_url" {
+  description = "URL to access the web app"
+  value       = "http://${google_compute_instance.vm.network_interface[0].access_config[0].nat_ip}"
+}
+
+output "domain_url" {
+  description = "Production URL after DNS and SSL are configured"
+  value       = "https://auction.rhythmmm.org"
+}
+
+output "ssh_command" {
+  description = "SSH into the VM"
+  value       = "gcloud compute ssh ${local.app_name}-vm --zone=${var.zone} --project=${var.project_id}"
+}
+
+output "registry" {
+  description = "Artifact Registry URL for Docker images"
   value       = "${local.registry_host}/${var.project_id}/${google_artifact_registry_repository.docker.repository_id}"
 }
 
-output "cloud_run_url" {
-  description = "Public HTTPS URL for the web app and API."
-  value       = google_cloud_run_v2_service.app.uri
-}
-
-output "api_base_url" {
-  description = "API base URL."
-  value       = "${google_cloud_run_v2_service.app.uri}/api"
-}
-
-output "cloud_sql_connection_name" {
-  description = "Cloud SQL connection name used by Cloud Run."
-  value       = google_sql_database_instance.postgres.connection_name
-}
-
-output "selected_runtime_size" {
-  description = "Runtime size selected for about 100 concurrent users."
-  value       = "Cloud Run ${var.cloud_run_cpu} vCPU / ${var.cloud_run_memory}, concurrency ${var.cloud_run_concurrency}; Cloud SQL ${var.db_tier}"
+output "artifact_registry" {
+  description = "Alias for registry output (used by deploy.ps1)"
+  value       = "${local.registry_host}/${var.project_id}/${google_artifact_registry_repository.docker.repository_id}"
 }

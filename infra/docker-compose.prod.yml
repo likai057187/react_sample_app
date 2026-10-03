@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chromatic-resonance-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auction
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: chromatic_resonance
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auction"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=64MB"
+      - "-c"
+      - "max_connections=30"
+      - "-c"
+      - "work_mem=2MB"
+
+  app:
+    image: ${REGISTRY}/app:latest
+    container_name: chromatic-resonance-app
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      API_KEY: ${API_KEY}
+      DATABASE_URL: "postgresql://auction:${DB_PASSWORD}@postgres:5432/chromatic_resonance?schema=public"
+      ROBOFLOW_API_KEY: ${ROBOFLOW_API_KEY}
+      ROBOFLOW_MODEL_ID: ${ROBOFLOW_MODEL_ID}
+      ROBOFLOW_INFERENCE_URL: ${ROBOFLOW_INFERENCE_URL}
+      DISCOVERY_MATCH_THRESHOLD: ${DISCOVERY_MATCH_THRESHOLD}
+      NODE_OPTIONS: "--max-old-space-size=384"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 448M
+
+  web:
+    image: ${REGISTRY}/nginx:latest
+    container_name: chromatic-resonance-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+volumes:
+  pgdata:
+  letsencrypt:
+  certbot-webroot:
